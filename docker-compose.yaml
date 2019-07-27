@@ -43,6 +43,7 @@ services:
       seventh-project-net:
     volumes:
       - ./nginx:/var/www
+      - ./static:/static
   flask:
     build:
       context: ./
@@ -56,6 +57,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DB=${MYSQL_DB}
     # command: 
     #   - "/bin/bash"
     #   - "-c"
@@ -67,6 +71,33 @@ services:
       seventh-project-net:
     volumes:
       - ./flask:/app/site
+  django:
+    build:
+      context: ./
+      dockerfile: django.dockerfile
+    container_name: django
+    ports:
+      - 6000
+    environment:
+      - TZ=Asia/Tokyo
+      - POSTGRES_URL=${POSTGRES_URL}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DB=${MYSQL_DB}
+    # command: 
+    #   - "/bin/bash"
+    #   - "-c"
+    #   - >
+    #     chmod 755 /app/uwsgi.ini;
+    #     uwsgi --ini /app/uwsgi.ini;
+    command: /bin/bash -c "tail -f /dev/null"
+    networks:
+      seventh-project-net:
+    volumes:
+      - ./django:/app/project
   postgres:
     image: postgres:11.2
     container_name: postgres
