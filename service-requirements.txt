@@ -1,4 +1,5 @@
 Django==2.2.3
+Django-Cors-Headers==3.0.2
 Uwsgi==2.0.18
 Psycopg2==2.8.3
 MySQLclient==1.4.2

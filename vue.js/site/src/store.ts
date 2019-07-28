@@ -19,7 +19,7 @@ export default new Vuex.Store({
       await axios('http://flask.site:80/user')
       .then((res) => {
         commit('setUser', {
-          name: res.data.token,
+          name: res.data.name,
         });
       });
     },
