@@ -6,6 +6,18 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
 from sqlalchemy import func
+import smtplib
+from email.mime.text import MIMEText
+from email.utils import formatdate
+# from googleapiclient.discovery import build
+# from google_auth_oauthlib.flow import InstalledAppFlow
+# from google.auth.transport.requests import Request
+# import base64
+# from email.mime.text import MIMEText
+# from apiclient import errors
+# import base64
+# import pickle
+import ssl
 import os
 import requests
 import json
@@ -15,6 +27,9 @@ from logging import getLogger
 import firebase_admin
 from firebase_admin import credentials, auth
 logger = getLogger(__name__)
+
+GOOGLE_ACCOUNT = os.environ['GOOGLE_ACCOUNT']
+GOOGLE_ACCOUNT_PASS = os.environ['GOOGLE_ACCOUNT_PASS']
 
 POSTGRES_URL = os.environ['POSTGRES_URL']
 POSTGRES_USER = os.environ['POSTGRES_USER']
@@ -38,6 +53,12 @@ DB_URL = 'postgresql+psycopg2://{user}:{pw}@{url}/{db}'.format(
 #     url=MYSQL_URL,
 #     db=MYSQL_DB
 #     )
+
+SCOPES = "https://www.googleapis.com/auth/gmail.send"
+CLIENT_SECRET_FILE = "credentials.json"
+APPLICATION_NAME = "seventh-project"
+MAIL_FROM = "wtrmorioka@gmail.com"
+MAIL_TO = "wtrmorioka@gmail.com"
 
 app = Flask(__name__)
 CORS(app)
@@ -192,12 +213,9 @@ class Contact(Resource):
             decoded_token = auth.verify_id_token(id_token)
         except Exception as e:
             print(e)
-            body = {
-                'result': 'false',
-            }
-            return jsonify(body)
+            res = {'result': 'false'}
+            return jsonify(res)
 
-        # 匿名認証だった場合、ログイン済みだった場合
         request_json = request.json
         account = ''
         email = decoded_token.get('email')
@@ -207,6 +225,39 @@ class Contact(Resource):
             account = decoded_token['uid'] 
 
         #メール送信
+        msg = MIMEText(request_json.get('message'))
+        msg['Subject'] = 'seventh-projectにcontact'
+        msg['From'] = 'seventh-project'
+        msg['To'] = GOOGLE_ACCOUNT
+        msg['Date'] = formatdate()
+        smtpobj = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10)
+        smtpobj.login(GOOGLE_ACCOUNT, GOOGLE_ACCOUNT_PASS)
+        smtpobj.sendmail('seventh-project', GOOGLE_ACCOUNT, msg.as_string())
+        smtpobj.close()
+
+        # creds = None
+        # if os.path.exists('token.pickle'):
+        #     with open('token.pickle', 'rb') as token:
+        #         creds = pickle.load(token)
+        # if not creds or not creds.valid:
+        #     if creds and creds.expired and creds.refresh_token:
+        #         creds.refresh(Request())
+        #     else:
+        #         flow = InstalledAppFlow.from_client_secrets_file(
+        #             'credentials.json', SCOPES)
+        #         creds = flow.run_local_server()
+        #     with open('token.pickle', 'wb') as token:
+        #         pickle.dump(creds, token)
+        # service = build('gmail', 'v1', credentials=creds)
+        # # 6. メール本文の作成
+        # sender = 'wtrmorioka@gmail.com'
+        # to = 'wtrmorioka@gmail.com'
+        # subject = 'メール送信自動化テスト'
+        # message_text = 'メール送信の自動化テストをしています。'
+        # message = create_message(sender, to, subject, message_text)
+        # # 7. Gmail APIを呼び出してメール送信
+        # send_message(service, 'me', message)
+
 
         #db登録
         contact = Contacts(
@@ -220,22 +271,16 @@ class Contact(Resource):
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
         db.session.add(contact)
-        
+
         try:
             db.session.commit()
         except Exception as e:
             print(e)
-            body = {
-                'result': 'false',
-            }
-            return jsonify(body)
+            res = {'result': 'false'}
+            return jsonify(res)
 
-        body = {
-            'result': 'true',
-        }
-
-        return jsonify(body)
-
+        res = {'result': 'true'}
+        return jsonify(res)
 
 api.add_resource(UserInfo, '/user')
 api.add_resource(Contact, '/contact')
@@ -254,6 +299,46 @@ def setLogger():
     logger.addHandler(handler1)
     logger.addHandler(handler2)
 
+# def get_credentials():
+#     script_dir =os.path.abspath(os.path.dirname(__file__)) 
+#     credential_dir = os.path.join(script_dir, ".credentials")
+
+#     if not os.path.exists(credential_dir):
+#         os.makedirs(credential_dir)
+#     credential_path = os.path.join(credential_dir, "my-gmail-sender.json")
+
+
+#     store = oauth2client.file.Storage(credential_path)
+#     print('test')
+
+#     credentials = store.get()
+#     if not credentials or credentials.invalid:
+#         flow = oauth2client.client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
+#         flow.user_agent = APPLICATION_NAME
+#         credentials = oauth2client.tools.run_flow(flow, store, flags)
+#         print("Storing credentials to " + credential_path)
+#     return credentials
+
+# 2. メール本文の作成
+# def create_message(sender, to, subject, message_text):
+#     message = MIMEText(message_text)
+#     message['to'] = to
+#     message['from'] = sender
+#     message['subject'] = subject
+#     encode_message = base64.urlsafe_b64encode(message.as_bytes())
+#     return {'raw': encode_message.decode()}
+# # 3. メール送信の実行
+# def send_message(service, user_id, message):
+#     try:
+#         message = (service.users().messages().send(userId=user_id, body=message)
+#                    .execute())
+#         print('Message Id: %s' % message['id'])
+#         return message
+#     except errors.HttpError as error:
+#         print('An error occurred: %s' % error)
+
+
 if __name__ == '__main__':
     setLogger()
+    # get_credentials()
     app.run(debug=True)
