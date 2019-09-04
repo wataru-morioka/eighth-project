@@ -9,14 +9,6 @@ from sqlalchemy import func
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formatdate
-# from googleapiclient.discovery import build
-# from google_auth_oauthlib.flow import InstalledAppFlow
-# from google.auth.transport.requests import Request
-# import base64
-# from email.mime.text import MIMEText
-# from apiclient import errors
-# import base64
-# import pickle
 import ssl
 import os
 import requests
@@ -109,6 +101,7 @@ class Photos(db.Model):
 class Contacts(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     account = db.Column(db.String(255), unique=False, nullable=False)
+    uid = db.Column(db.String(128), unique=False, nullable=False)
     name = db.Column(db.String(64), unique=False, nullable=False)
     organization = db.Column(db.String(16), unique=False, nullable=False)
     state = db.Column(db.String(16), unique=False, nullable=False)
@@ -117,9 +110,9 @@ class Contacts(db.Model):
     message = db.Column(db.String(5000), unique=False, nullable=False)
     created_datetime = db.Column(db.DateTime, unique=False, nullable=False)
 
-    def __init__(self, account, name, organization, state, email, phone, message, created_datetime):
-        # self.id = id
+    def __init__(self, account, uid,  name, organization, state, email, phone, message, created_datetime):
         self.account = account
+        self.uid = uid
         self.name = name
         self.organization = organization
         self.state = state
@@ -218,15 +211,16 @@ class Contact(Resource):
 
         request_json = request.json
         account = ''
+        uid = decoded_token.get('uid')
         email = decoded_token.get('email')
         if email == None:
             account = 'annonymaous'
         else:
-            account = decoded_token['uid'] 
+            account = decoded_token.get('email')
 
         #メール送信
         msg = MIMEText(request_json.get('message'))
-        msg['Subject'] = 'seventh-projectにcontact'
+        msg['Subject'] = '【seventh-project】Contact'
         msg['From'] = 'seventh-project'
         msg['To'] = GOOGLE_ACCOUNT
         msg['Date'] = formatdate()
@@ -235,40 +229,18 @@ class Contact(Resource):
         smtpobj.sendmail('seventh-project', GOOGLE_ACCOUNT, msg.as_string())
         smtpobj.close()
 
-        # creds = None
-        # if os.path.exists('token.pickle'):
-        #     with open('token.pickle', 'rb') as token:
-        #         creds = pickle.load(token)
-        # if not creds or not creds.valid:
-        #     if creds and creds.expired and creds.refresh_token:
-        #         creds.refresh(Request())
-        #     else:
-        #         flow = InstalledAppFlow.from_client_secrets_file(
-        #             'credentials.json', SCOPES)
-        #         creds = flow.run_local_server()
-        #     with open('token.pickle', 'wb') as token:
-        #         pickle.dump(creds, token)
-        # service = build('gmail', 'v1', credentials=creds)
-        # # 6. メール本文の作成
-        # sender = 'wtrmorioka@gmail.com'
-        # to = 'wtrmorioka@gmail.com'
-        # subject = 'メール送信自動化テスト'
-        # message_text = 'メール送信の自動化テストをしています。'
-        # message = create_message(sender, to, subject, message_text)
-        # # 7. Gmail APIを呼び出してメール送信
-        # send_message(service, 'me', message)
-
-
         #db登録
         contact = Contacts(
             account,
+            uid,
             request_json.get('name'),
             request_json.get('organization'),
             request_json.get('state'),
             request_json.get('email'),
             request_json.get('phone'),
             request_json.get('message'),
-            datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            datetime.now()
+            # datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         )
         db.session.add(contact)
 
@@ -299,46 +271,6 @@ def setLogger():
     logger.addHandler(handler1)
     logger.addHandler(handler2)
 
-# def get_credentials():
-#     script_dir =os.path.abspath(os.path.dirname(__file__)) 
-#     credential_dir = os.path.join(script_dir, ".credentials")
-
-#     if not os.path.exists(credential_dir):
-#         os.makedirs(credential_dir)
-#     credential_path = os.path.join(credential_dir, "my-gmail-sender.json")
-
-
-#     store = oauth2client.file.Storage(credential_path)
-#     print('test')
-
-#     credentials = store.get()
-#     if not credentials or credentials.invalid:
-#         flow = oauth2client.client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-#         flow.user_agent = APPLICATION_NAME
-#         credentials = oauth2client.tools.run_flow(flow, store, flags)
-#         print("Storing credentials to " + credential_path)
-#     return credentials
-
-# 2. メール本文の作成
-# def create_message(sender, to, subject, message_text):
-#     message = MIMEText(message_text)
-#     message['to'] = to
-#     message['from'] = sender
-#     message['subject'] = subject
-#     encode_message = base64.urlsafe_b64encode(message.as_bytes())
-#     return {'raw': encode_message.decode()}
-# # 3. メール送信の実行
-# def send_message(service, user_id, message):
-#     try:
-#         message = (service.users().messages().send(userId=user_id, body=message)
-#                    .execute())
-#         print('Message Id: %s' % message['id'])
-#         return message
-#     except errors.HttpError as error:
-#         print('An error occurred: %s' % error)
-
-
 if __name__ == '__main__':
     setLogger()
-    # get_credentials()
     app.run(debug=True)
