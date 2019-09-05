@@ -218,8 +218,15 @@ class Contact(Resource):
         else:
             account = decoded_token.get('email')
 
+        message = 'name: ' + request_json.get('name')
+        message += '\n' + 'organization: ' + request_json.get('organization')
+        message += '\n' + 'state: ' + request_json.get('state')
+        message += '\n' + 'email: ' + request_json.get('email')
+        message += '\n' + 'phone: ' + request_json.get('phone')
+        message += '\n' + 'message: ' + '\n' +  request_json.get('message')
+
         #メール送信
-        msg = MIMEText(request_json.get('message'))
+        msg = MIMEText(message)
         msg['Subject'] = '【seventh-project】Contact'
         msg['From'] = 'seventh-project'
         msg['To'] = GOOGLE_ACCOUNT
