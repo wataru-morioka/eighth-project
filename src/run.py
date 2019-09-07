@@ -5,7 +5,11 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
-from sqlalchemy import func
+# from sqlalchemy import func
+from sqlalchemy import (Column, String, Text, ForeignKey, \
+                create_engine, MetaData, DECIMAL, DATETIME, exc, event, Index, func)
+from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.orm import (sessionmaker, relationship, scoped_session)
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formatdate
@@ -108,7 +112,7 @@ class Contacts(db.Model):
     email = db.Column(db.String(255), unique=False, nullable=False)
     phone = db.Column(db.String(16), unique=False, nullable=True)
     message = db.Column(db.String(5000), unique=False, nullable=False)
-    created_datetime = db.Column(db.DateTime, unique=False, nullable=False)
+    created_datetime = db.Column(db.DateTime, index=True, unique=False, nullable=False)
 
     def __init__(self, account, uid,  name, organization, state, email, phone, message, created_datetime):
         self.account = account
@@ -127,6 +131,29 @@ class ContactsSchema(ma.Schema):
         fields = ('id', 'account', 'name', 'organization', 'state', 'email', 'phone', 'message', 'created_datetime')
 
 contact_schema = ContactsSchema()
+
+class Photographs(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sub_title = db.Column(db.String(64), unique=False, nullable=True)
+    title = db.Column(db.String(64), unique=False, nullable=True)
+    mimetype = db.Column(db.String(64), unique=False, nullable=False)
+    file_name = db.Column(db.String(64), unique=False, nullable=False)
+    size = db.Column(db.Integer, unique=False, nullable=False)
+    data = db.Column(db.Binary, unique=False, nullable=False)
+    created_datetime = db.Column(db.DateTime, unique=False, nullable=False)
+    modified_datetime = db.Column(db.DateTime, unique=False, nullable=False)
+
+class Videos(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    photograph_id = db.Column(db.Integer, ForeignKey('photographs.id', ondelete='CASCADE'), index=True, unique=True, nullable=False)
+    mimetype = db.Column(db.String(64), unique=False, nullable=False)
+    file_name = db.Column(db.String(64), unique=False, nullable=False)
+    size = db.Column(db.Integer, unique=False, nullable=False)
+    data = db.Column(db.Binary, unique=False, nullable=False)
+    created_datetime = db.Column(db.DateTime, unique=False, nullable=False)
+    modified_datetime = db.Column(db.DateTime, unique=False, nullable=False)
+
+    photographs = relationship('Photographs', backref='photographs')
 
 class UserInfo(Resource):
     def get(self):
