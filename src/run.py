@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_marshmallow import Marshmallow
 # from sqlalchemy import func
 from sqlalchemy import (Column, String, Text, ForeignKey, \
-                create_engine, MetaData, DECIMAL, DATETIME, exc, event, Index, func)
+                create_engine, MetaData, DECIMAL, DATETIME, exc, event, Index, func, desc)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import (sessionmaker, relationship, scoped_session)
 import smtplib
@@ -22,6 +22,7 @@ import logging
 from logging import getLogger 
 import firebase_admin
 from firebase_admin import credentials, auth
+import base64
 logger = getLogger(__name__)
 
 GOOGLE_ACCOUNT = os.environ['GOOGLE_ACCOUNT']
@@ -66,7 +67,7 @@ Migrate(app, db)
 ma = Marshmallow(app)
 api = Api(app)
 
-cred = credentials.Certificate('firebase-service.json')
+cred = credentials.Certificate('/app/site/src/firebase-service.json')
 firebase_admin.initialize_app(cred)
 
 # テストデータ
@@ -142,6 +143,14 @@ class Photographs(db.Model):
     data = db.Column(db.Binary, unique=False, nullable=False)
     created_datetime = db.Column(db.DateTime, unique=False, nullable=False)
     modified_datetime = db.Column(db.DateTime, unique=False, nullable=False)
+
+class PhotographsSchema(ma.Schema):
+    class Meta:
+        model = Photographs
+        fields = ('id', 'sub_title', 'title', 'mimetype', 'file_name', 'size', 'data', 'created_datetime', 'modified_datetime')
+
+photo_schema = PhotographsSchema()
+photos_schema = PhotographsSchema(many=True)
 
 class Videos(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -288,23 +297,33 @@ class Contact(Resource):
         res = {'result': 'true'}
         return jsonify(res)
 
+class Photograph(Resource):
+    def get(self):
+        header = request.headers.get('Authorization')
+        if header == None:
+            abort(404)
+
+        _, id_token = header.split()
+        decoded_token = {}
+        try:
+            decoded_token = auth.verify_id_token(id_token)
+        except Exception as e:
+            print(e)
+            res = {'result': 'false'}
+            return jsonify(res)
+
+        # TODO adminチェック
+        print('test')
+
+        photos = Photographs.query.order_by(desc(Photographs.created_datetime)).all()
+
+        print(photos_schema.dump(photos).data)
+
+        return jsonify(photos_schema.dump(photos).data)
+
 api.add_resource(UserInfo, '/user')
 api.add_resource(Contact, '/contact')
-
-def setLogger():
-    #handler1を作成
-    handler1 = logging.StreamHandler()
-    handler1.setFormatter(logging.Formatter('%(asctime)s %(levelname)8s %(message)s'))
-
-    #handler2を作成
-    handler2 = logging.FileHandler(filename='test.log')  #handler2はファイル出力
-    handler2.setLevel(logging.WARN)     #handler2はLevel.WARN以上
-    handler2.setFormatter(logging.Formatter('%(asctime)s %(levelname)8s %(message)s'))
-
-    #loggerに2つのハンドラを設定
-    logger.addHandler(handler1)
-    logger.addHandler(handler2)
+api.add_resource(Photograph, '/photographs')
 
 if __name__ == '__main__':
-    setLogger()
     app.run(debug=True)
