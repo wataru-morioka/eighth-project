@@ -70,13 +70,6 @@ api = Api(app)
 cred = credentials.Certificate('/app/site/src/firebase-service.json')
 firebase_admin.initialize_app(cred)
 
-# テストデータ
-users = [
-    { 'id': 'U001', 'name': 'ユーザ太郎', 'age': 27 },
-    { 'id': 'U002', 'name': 'ユーザ二郎', 'age': 20 },
-    { 'id': 'U003', 'name': 'ユーザ三郎', 'age': 10 }
-]
-
 class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), unique=False, nullable=True)
@@ -164,72 +157,6 @@ class Videos(db.Model):
 
     photographs = relationship('Photographs', backref='photographs')
 
-class UserInfo(Resource):
-    def get(self):
-        # id = request.args.get('id')
-        # result = [n for n in users if n['id'] == id]
-
-        # user = User(1, 'wataru')
-
-        # db.session.add(user)
-
-        # db.session.commit()
-        user = Users.query.filter_by(id = 1).first()
-
-        return jsonify(user_schema.dump(user).data)
-        # return users[0]
-
-        # if len(result) >= 1: 
-        #     # ユーザ情報を返却
-        #     return result[0]
-        # else:
-        #     # 存在しないユーザIDが指定された
-        #     abort(404)
-
-    def post(self):
-        #ユーザを追加
-        resp = requests.post('https://www.googleapis.com/identitytoolkit/v3/'
-                                      'relyingparty/getAccountInfo'
-                                      '?key={}'.format('AIzaSyBb1EQB5F7Q7O9n8BH1Fy929XhH7tRy6OM'),
-                                      params={'idToken': request.json['idToken']})
-        logger.debug('userinfo:{}'.format(resp.text))
-        print(resp.text)
-        data = json.loads(resp.text)
-        body = {
-            'uid': data['users'][0]['localId'],
-            'email': data['users'][0]['email'],
-            'displayName': data['users'][0]['displayName'],
-        }
-
-        return jsonify(body)
-
-    def put(self):
-        user = request.json
-        lst = [val for val in users if val['id'] == user['id']]
-        
-        if len(lst) >= 1: 
-            lst[0]['name'] = user['name']
-            lst[0]['age'] = user['age']
-        else:
-            #存在しないユーザIDが指定された場合
-            abort(404)
-
-        #正常に更新できたので、HTTP status=204(NO CONTENT)を返す
-        return '', 204
-
-    def delete(self):
-        id = request.args.get('id')
-        lst = [i for i, val in enumerate(users) if val['id'] == id]
-        for index in lst:
-            del users[index]
-
-        if len(lst) >= 1: 
-            #ユーザの削除を行った場合、HTTP status=204(NO CONTENT)を返す
-            return '', 204
-        else:
-            #存在しないユーザIDが指定された場合
-            abort(404)
-
 class Contact(Resource):
     def post(self):
         header = request.headers.get('Authorization')
@@ -297,33 +224,7 @@ class Contact(Resource):
         res = {'result': 'true'}
         return jsonify(res)
 
-class Photograph(Resource):
-    def get(self):
-        header = request.headers.get('Authorization')
-        if header == None:
-            abort(404)
-
-        _, id_token = header.split()
-        decoded_token = {}
-        try:
-            decoded_token = auth.verify_id_token(id_token)
-        except Exception as e:
-            print(e)
-            res = {'result': 'false'}
-            return jsonify(res)
-
-        # TODO adminチェック
-        print('test')
-
-        photos = Photographs.query.order_by(desc(Photographs.created_datetime)).all()
-
-        print(photos_schema.dump(photos).data)
-
-        return jsonify(photos_schema.dump(photos).data)
-
-api.add_resource(UserInfo, '/user')
 api.add_resource(Contact, '/contact')
-api.add_resource(Photograph, '/photographs')
 
 if __name__ == '__main__':
     app.run(debug=True)
