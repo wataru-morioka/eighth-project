@@ -9,5 +9,6 @@
 - お問い合わせ内容を管理者にメール送信（googleメールサーバ使用）  
 - firebase認証機能利用（匿名認証）  
 - ORマッパー（flask_sqlalchemy）  
-- DBマイグレーション機能（flask_migrate）
+- DBマイグレーション機能（flask_migrate）  
+- ロギング（/var/log/uwsgi配下）  
 
