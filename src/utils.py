@@ -7,7 +7,7 @@ import os
 GOOGLE_ACCOUNT = os.environ['GOOGLE_ACCOUNT']
 GOOGLE_ACCOUNT_PASS = os.environ['GOOGLE_ACCOUNT_PASS']
 
-# 管理者へメール送信
+# 管理者へメール送信（googleメールサーバを利用）
 def send_mail(request_json):
     message = 'name: ' + request_json.get('name')
     message += '\n' + 'organization: ' + request_json.get('organization')

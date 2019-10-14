@@ -12,6 +12,7 @@ import os
 import requests
 from datetime import datetime
 import json
+import traceback
 import firebase_admin
 from firebase_admin import credentials, auth
 import sys
@@ -45,6 +46,7 @@ db = SQLAlchemy(app)
 import models
 Migrate(app, db)
 
+# firebase authentication（匿名認証）サービスを使用
 if (not len(firebase_admin._apps)):
     cred = credentials.Certificate('/app/site/src/firebase-service.json')
     firebase_admin.initialize_app(cred)
@@ -61,8 +63,8 @@ class Contact(Resource):
         try:
             # ヘッダのトークンがfirebaseに登録されているかチェック
             decoded_token = auth.verify_id_token(id_token)
-        except Exception as e:
-            print(e)
+        except Exception:
+            print(traceback.format_exc())
             return jsonify(res)
 
         request_json = request.json
