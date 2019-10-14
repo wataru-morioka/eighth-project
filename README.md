@@ -9,3 +9,4 @@
 - firebase認証機能利用（匿名認証）  
 - ORマッパー（flask_sqlalchemy）  
 - DBマイグレーション機能（flask_migrate）
+
