@@ -2,6 +2,7 @@
 ### 概要
 お問い合わせリクエスト受付　Restful Api（POST）
 ### 機能一覧
+- アプリケーションサーバ機能（uwsgi）  
 - リクエスト受付（flask_restful）  
 - CORS対策（flask_cors）  
 - お問い合わせ内容をDBに登録（postgreSQL）  
