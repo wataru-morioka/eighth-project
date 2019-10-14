@@ -7,6 +7,7 @@ from sqlalchemy import (Column, String, Text, ForeignKey, \
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import (sessionmaker, relationship, scoped_session)
 import os
+import traceback
 
 ma = Marshmallow(app)
     
@@ -38,8 +39,8 @@ class Contacts(db.Model):
         try:
             db.session.commit()
             return True
-        except Exception as e:
-            print(e)
+        except Exception:
+            print(traceback.format_exc())
             return False
 
 class ContactsSchema(ma.Schema):
